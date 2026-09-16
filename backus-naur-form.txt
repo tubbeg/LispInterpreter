@@ -1,0 +1,16 @@
+<s_expression> ::= <atom> | <list>
+
+<list>         ::= "(" <s_expression_list> ")"
+
+<s_expression_list> ::= <s_expression> <s_expression_list> 
+                      | <s_expression> "." <s_expression> 
+                      | <empty>
+
+<atom>         ::= <symbol> | <number> | <string>
+
+<symbol>       ::= <letter> <symbol_chars>
+<symbol_chars> ::= <letter> <symbol_chars> | <digit> <symbol_chars> | <special_char> <symbol_chars> | <empty>
+
+<number>       ::= <digit> | <digit> <number>
+<string>       ::= '"' <characters> '"'
+<empty>        ::= ""
