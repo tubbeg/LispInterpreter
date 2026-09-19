@@ -46,11 +46,7 @@ let startsWithLetterOrSpecialChar(w : string) =
 //caress
 
 let isInvalidChar c =
-    match Char.IsAsciiLetter c,Char.IsAsciiDigit c, charIsSpecialCharacter c with
-    | true,_,_ -> false
-    | _,true,_ -> false
-    | _,_,true -> false
-    | _ -> true
+    (Char.IsAsciiLetter c || Char.IsAsciiDigit c || charIsSpecialCharacter c) |> not
 
 let isValidChar c = isInvalidChar c |> not
 
@@ -58,9 +54,7 @@ let symbolHasValidChars (w : string) =
     w |> seq |> Seq.forall (fun c -> isValidChar c)
 
 let isSymbol w =
-    match symbolHasValidChars w, startsWithLetterOrSpecialChar w with
-    | true, true  -> true
-    | _ -> false
+    symbolHasValidChars w && startsWithLetterOrSpecialChar w
 
 let isNumber w = w |> Seq.forall Char.IsDigit
 
