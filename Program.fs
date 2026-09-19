@@ -2,12 +2,34 @@
 open Lexer
 open System.IO
 
+type Stuff = Stuff
 
-let parse tokens =
-    tokens |> printfn "%A"
+type AST =
+    | S of Stuff
+    | NothingToDo
+
+
+let seqListToList (s : seq<List<Token>>) =
+    [
+        for l in s |> Seq.toList do
+            for t in l do
+                yield t
+    ]
+
+let parseTokens (tokens : seq<List<Token>>) =
+    tokens |> printfn "Do tokens processing stuff here: %A"
+    let tokenList = tokens |> seqListToList
+    let rec ptkens (tkens : Token list) ast = 
+        match tkens with
+        | [] -> NothingToDo
+        | token::rem ->
+            printfn "Tokens is: %A" token
+            ptkens rem NothingToDo 
+    ptkens tokenList NothingToDo
 
 let execute ast =
-    ()
+    ast |> printfn "Got AST: %A"
+    printfn "Done!"
 
 let readSourceContent (path : string) = 
     let content = seq {
@@ -15,7 +37,7 @@ let readSourceContent (path : string) =
         while not sr.EndOfStream do
             yield sr.ReadLine ()
     }
-    content |> printf "File contents: %A"
+    content |> printfn "File contents: %A"
     content
 
 
@@ -25,7 +47,7 @@ let interpret() =
         |> Array.head
         |> readSourceContent
         |> lex
-        |> parse
+        |> parseTokens
         |> execute
 
 
