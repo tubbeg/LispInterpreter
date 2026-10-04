@@ -19,40 +19,13 @@ let seqListToList (s : seq<List<Token>>) =
                 yield t
     ]
 
-
-let getTokensUntilNextDeparan tokens =
-    let rec gtund (tkens : Token list) enparanCounter (result : Token list)  =
-        match tkens, enparanCounter with
-        | [],_ -> result, []
-        | Token.ENPARAN::rem,_ -> [Token.ENPARAN] |> List.append result |> gtund rem (enparanCounter + 1)
-        | Token.DEPARAN::rem,0 -> result,rem
-        | Token.DEPARAN::rem, x when x > 0 ->
-            [Token.DEPARAN] |> List.append result |> gtund rem (enparanCounter - 1)
-        | token::rem,_ -> [token] |> List.append result |> gtund rem enparanCounter
-    gtund tokens 0 [] 
-
-
-
-
-let addAtomToAst  ast   atom : Sexpression =
-    [atom] |> List.append ast
-
-let addNumberToAst  (ast : SexpItem list) nr =
-    Number nr |> Atom |> addAtomToAst  ast
-
-let addStringToAst  (ast : SexpItem list) s  =
-    String s |> Atom |> addAtomToAst  ast
-
-let addSymbolToAst  (ast : SexpItem list) sy =
-    Symbol sy |> Atom |> addAtomToAst  ast 
-
 let filterSpace tokens =
     tokens |> List.filter (fun e -> e<>Space)
 
 let parse2 (tokens : seq<List<Token>>) : Sexpression =
     let rec ptkens (tkens : Token list, ast  : Sexpression) : (Token list * Sexpression) = 
         match tkens with
-        | [] -> ([],ast)
+        | [] -> [],ast
         | Token.DEPARAN::rem -> rem,ast
         | Token.Number nr::rem ->
             let updatedAst = [nr |> Number |> Atom] |> List.append ast
@@ -64,12 +37,13 @@ let parse2 (tokens : seq<List<Token>>) : Sexpression =
             let updatedAst = [sy |> Symbol |> Atom] |> List.append ast
             ptkens (rem,updatedAst)
         | Token.ENPARAN::rem -> 
-            let newList = []
-            let rem, subAst = ptkens (rem, newList)
-            let appendList = subAst |> List.append ast
-            rem, appendList
+            let rem, subAst = ptkens (rem, [])
+            let sExpression = subAst |> S
+            let appendList3 = [sExpression] |> List.append ast
+            ptkens (rem, appendList3)
         | _ -> new Exception("problema") |> raise
-    let tokenList = tokens |> seqListToList |> filterSpace
+    let tokenList = tokens |> seqListToList |> filterSpace //|> addExtraS
+    printfn "New tokens list %A" tokenList
     let remainingTokens, result = ptkens (tokenList,[])
     remainingTokens |> printfn "Remaining tokens %A"
     result
