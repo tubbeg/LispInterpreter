@@ -2,19 +2,15 @@
 open Lexer
 open System.IO
 
-type Atom =
+type Sexpression = SexpItem list
+and SexpItem =
+    | Atom of Atom
+    | S of Sexpression
+    | Empty
+and Atom =
     | Number of int
     | Symbol of string
     | String of string
-
-type Sexpression =
-    | Atom
-    | S of Sexpression
-
-//abstract syntax tree
-type AST =
-    | Expression of Sexpression
-    | NothingToDo
 
 let seqListToList (s : seq<List<Token>>) =
     [
@@ -24,47 +20,59 @@ let seqListToList (s : seq<List<Token>>) =
     ]
 
 
-    //| Symbol of string
-    //| String of string
-    //| Number of int
-    //| Space
-    //| ENPARAN
-    //| DEPARAN
+let getTokensUntilNextDeparan tokens =
+    let rec gtund (tkens : Token list) enparanCounter (result : Token list)  =
+        match tkens, enparanCounter with
+        | [],_ -> result, []
+        | Token.ENPARAN::rem,_ -> [Token.ENPARAN] |> List.append result |> gtund rem (enparanCounter + 1)
+        | Token.DEPARAN::rem,0 -> result,rem
+        | Token.DEPARAN::rem, x when x > 0 ->
+            [Token.DEPARAN] |> List.append result |> gtund rem (enparanCounter - 1)
+        | token::rem,_ -> [token] |> List.append result |> gtund rem enparanCounter
+    gtund tokens 0 [] 
 
 
-let appendToAST ast t = NothingToDo
 
-let appendSexpressionToAST ast s = NothingToDo
 
-let parseSexpression tokenList =
-    let rec prse l s r =
-        match l with
-        | [] -> r,s
-        | Token.DEPARAN::rem -> rem, s
-        | token::rem ->
-            match token with
-            | Token.ENPARAN -> prse rem (appendSexpressionToAST )
-            | anyOther -> 
-    let result = []
-    let sExpression : Sexpression option = None
-    prse tokenList sExpression result
+let addAtomToAst  ast   atom : Sexpression =
+    [atom] |> List.append ast
 
-let parse (tokens : seq<List<Token>>) : AST =
-    let rec ptkens (tkens : Token list) (ast : AST) = 
+let addNumberToAst  (ast : SexpItem list) nr =
+    Number nr |> Atom |> addAtomToAst  ast
+
+let addStringToAst  (ast : SexpItem list) s  =
+    String s |> Atom |> addAtomToAst  ast
+
+let addSymbolToAst  (ast : SexpItem list) sy =
+    Symbol sy |> Atom |> addAtomToAst  ast 
+
+let filterSpace tokens =
+    tokens |> List.filter (fun e -> e<>Space)
+
+let parse2 (tokens : seq<List<Token>>) : Sexpression =
+    let rec ptkens (tkens : Token list, ast  : Sexpression) : (Token list * Sexpression) = 
         match tkens with
-        | [] -> ast
-        | Token.Space::rem -> ptkens rem ast
-        | Token.Number nr::rem -> Number nr |> appendToAST ast |> ptkens rem
-        | Token.String s::rem -> String s |> appendToAST ast |> ptkens rem
-        | Token.Symbol s::rem -> Symbol s |> appendToAST ast |> ptkens rem
-        | Token.ENPARAN::rem ->
-            match parseSexpression rem with
-            | rem2,Some exp ->
-                exp |> appendSexpressionToAST ast |> ptkens rem2
-            | _ -> new Exception("Problema") |> raise
-        | err::_ -> new Exception("Unable to parse token" + string err) |> raise
-    let initDefaultValue = NothingToDo
-    ptkens (tokens |> seqListToList) initDefaultValue
+        | [] -> ([],ast)
+        | Token.DEPARAN::rem -> rem,ast
+        | Token.Number nr::rem ->
+            let updatedAst = [nr |> Number |> Atom] |> List.append ast
+            ptkens (rem,updatedAst)
+        | Token.String s::rem -> 
+            let updatedAst = [s |> String |> Atom] |> List.append ast
+            ptkens (rem,updatedAst)
+        | Token.Symbol sy::rem ->
+            let updatedAst = [sy |> Symbol |> Atom] |> List.append ast
+            ptkens (rem,updatedAst)
+        | Token.ENPARAN::rem -> 
+            let newList = []
+            let rem, subAst = ptkens (rem, newList)
+            let appendList = subAst |> List.append ast
+            rem, appendList
+        | _ -> new Exception("problema") |> raise
+    let tokenList = tokens |> seqListToList |> filterSpace
+    let remainingTokens, result = ptkens (tokenList,[])
+    remainingTokens |> printfn "Remaining tokens %A"
+    result
 
 let execute ast =
     ast |> printfn "Got AST: %A"
@@ -86,7 +94,7 @@ let interpret() =
         |> Array.head
         |> readSourceContent
         |> lex
-        |> parse
+        |> parse2
         |> execute
 
 
