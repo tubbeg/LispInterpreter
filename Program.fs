@@ -2,11 +2,7 @@
 open Lexer
 open System.IO
 open Parser
-
-let execute ast =
-    ast |> printfn "Got AST: %A"
-    printfn "Done!"
-
+open Execute
 
 let readSourceContent (path : string) = 
     let content = seq {
