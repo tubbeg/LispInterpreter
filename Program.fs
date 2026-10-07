@@ -7,6 +7,7 @@ let execute ast =
     ast |> printfn "Got AST: %A"
     printfn "Done!"
 
+
 let readSourceContent (path : string) = 
     let content = seq {
         use sr = new StreamReader (path)
@@ -23,7 +24,7 @@ let interpret() =
         |> Array.head
         |> readSourceContent
         |> lex
-        |> parse2
+        |> parse
         |> execute
 
 
