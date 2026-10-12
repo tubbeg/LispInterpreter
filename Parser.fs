@@ -21,7 +21,7 @@ let tokenNrToChar t =
     match t with 
     | Digit n -> n
     | c ->
-        printfn "Got token %A" c
+        //printfn "Got token %A" c
         new Exception("Did not expect non-number") |> raise
 
 
@@ -30,7 +30,7 @@ let tokenCharToChar t =
     | Token.Character c -> c
     | Token.Digit n -> n
     | c ->
-        printfn "Got token %A" c
+        //printfn "Got token %A" c
         new Exception("Did not expect non-number") |> raise
 
 let tokenNumberListToNumber l : Atom =
@@ -48,7 +48,7 @@ let parseDigits l =
     let r,remainder = pad l []
     tokenNumberListToNumber r, remainder
 let tokenCharListToSymbol l =
-    printfn "Got list %A" l
+    //printfn "Got list %A" l
     let head = l |> List.head
     match head with
     | Plus -> Symbol "+"

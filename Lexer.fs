@@ -16,9 +16,6 @@ type Token =
     | Deparan
 
 
-
-
-
 let parseCharacter c = 
     match c with
     | '(' -> Enparan

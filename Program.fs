@@ -10,18 +10,18 @@ let readSourceContent (path : string) =
         while not sr.EndOfStream do
             yield sr.ReadLine ()
     }
-    content |> printfn "File contents: %A"
+    //content |> printfn "File contents: %A"
     content
 
+let getPath () = Environment.GetCommandLineArgs() |> Array.tail
 
 let interpret() =
-    let filePath = Environment.GetCommandLineArgs() |> Array.tail
-    filePath
-        |> Array.head
-        |> readSourceContent
-        |> lex
-        |> parse
-        |> execute
-
+    ()
+    |> getPath
+    |> Array.head
+    |> readSourceContent
+    |> lex
+    |> parse
+    |> execute
 
 interpret()
