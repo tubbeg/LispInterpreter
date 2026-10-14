@@ -112,8 +112,6 @@ let parseSymbol l =
         l |> List.iter (fun c -> printfn "Got token: %A" c)
         new Exception("Invalid symbol") |> raise
 
-    
-
 //for now, there's no support for user-defined strings at all
 let parse (tokens : List<Token>) : Sexpression =
     let rec ptkens (tkens : Token list, ast  : Sexpression) : (Token list * Sexpression) = 
