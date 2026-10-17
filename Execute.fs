@@ -10,68 +10,6 @@ type VarValue =
     | Property of SexpItem
 type SymbolMap = Map<string, VarValue>
 
-
-//anonymous record + lambda functions = dynamic object //except anon records has limitations
-
-let throwExpNumber () = new Exception("Expected number") |> raise
-
-let addAtoms a1 a2 =
-    match a1,a2 with
-    | Atom (Number n), Atom (Number n2) -> n + n2 |> Number |> Atom
-    | _ -> () |> throwExpNumber
-
-let subAtoms a1 a2 =
-    match a1,a2 with
-    | Atom (Number n), Atom (Number n2) ->
-        printfn "subbing %A with %A" n n2
-        n - n2 |> Number |> Atom
-    | _ -> () |> throwExpNumber
-
-let isNumberAtom a =
-    match a with
-    | Atom (Number _) -> true
-    | _ -> false
-
-type EvalFn = Sexpression -> SexpItem -> SexpItem
-
-let addSexpWithNumber (s : Sexpression) a r (cb : EvalFn) =
-    match cb s r, a with
-    | Atom (Number n2), Atom (Number n) -> n + n2 |> Number |> Atom
-    | _ -> () |> throwExpNumber
-
-let addSexpWithSexp (s1 : Sexpression) s2 r (cb : EvalFn) =
-    match cb s1 r, cb s2 r with
-    | Atom (Number n2), Atom (Number n) -> n + n2 |> Number |> Atom
-    | _ -> () |> throwExpNumber
-
-let subSexpWithSexp (s1 : Sexpression) s2 r (cb : EvalFn) =
-    match cb s1 r, cb s2 r with
-    | Atom (Number n2), Atom (Number n) -> n - n2 |> Number |> Atom
-    | _ -> () |> throwExpNumber
-
-let subSexpWithNumber (s : Sexpression) a r (cb : EvalFn) =
-    match cb s r, a with
-    | Atom (Number n2), Atom (Number n) -> n - n2 |> Number |> Atom
-    | _ ->
-        printfn "Got %A %A" s a
-        () |> throwExpNumber
-
-let add first second r (cb : EvalFn) =
-    match first,second with
-    | a1, a2 when isNumberAtom a1 && isNumberAtom a2 -> addAtoms a1 a2
-    | Atom (Number n),S ex -> addSexpWithNumber ex (Atom (Number n)) r cb
-    | S ex, Atom (Number n) -> addSexpWithNumber ex (Atom (Number n)) r cb
-    | S ex1, S ex2 -> addSexpWithSexp ex1 ex2 r cb
-    | _ -> () |> throwExpNumber
-
-let sub first second r (cb : EvalFn) =
-    match first,second with
-    | a1, a2 when isNumberAtom a1 && isNumberAtom a2 -> subAtoms a1 a2
-    | Atom (Number n),S ex -> subSexpWithNumber ex (Atom (Number n)) r cb
-    | S ex, Atom (Number n) -> subSexpWithNumber ex (Atom (Number n)) r cb
-    | S ex1, S ex2 -> addSexpWithSexp ex1 ex2 r cb
-    | _ -> () |> throwExpNumber
-
 let throwUnexpectedSymbol sy =
     let errMsg = "Did not expected symbol: " + sy
     new Exception(errMsg) |> raise
@@ -79,20 +17,49 @@ let throwUnexpectedSymbol sy =
 let throwUnexpectedItem (i : SexpItem) =
     let errMsg = "Did not expected item: " + (i |> string)
     new Exception(errMsg) |> raise
+let throwExpNumber () = new Exception("Expected number") |> raise
+let throwWrongNrOfArgs () = new Exception("Wrong nr of arguments") |> raise
+
+let atomToNr a =
+    match a with
+    | Atom (Number n) -> n
+    | _ -> throwExpNumber ()
+
+let subAtoms list =
+    let l = List.rev list
+    match l |> List.length with
+    | 0 -> throwWrongNrOfArgs ()
+    | 1 ->
+        match List.head l with
+        | Atom (Number n) -> 0 - n |> Number |> Atom
+        | _ -> throwExpNumber ()
+    | _ -> 
+        let rec sa list result =
+            match list with
+            | [] -> result |> Number |> Atom
+            | Atom (Number n)::rem ->
+                printfn "subbing2 %A with %A" result n
+                result - n |> sa rem
+            | _ -> throwExpNumber ()
+        sa (l |> List.tail) (l |> List.head |> atomToNr)
+
+let addAtoms a1 a2 =
+    match a1,a2 with
+    | Atom (Number n), Atom (Number n2) -> n + n2 |> Number |> Atom
+    | _ -> () |> throwExpNumber
 
 type Operation =
     | Add
     | Sub
 
-
 let functionCall (e : SexpItem) op =
     printfn "Executing %A %A" e op
     match op,e with
-    | Add, S l  -> l |> List.reduce addAtoms
-    | Add, Atom (Number n) -> (Atom (Number n))
-    | Sub, _ -> throwUnexpectedSymbol "Sub"
+    | Add, S l  -> l |> List.fold addAtoms (Atom (Number 0))
+    | Sub, S l  -> l |> subAtoms
+    | Add, Atom (Number n) -> Atom (Number n)
+    | Sub, Atom (Number n) -> Atom (Number (0 - n))
     | _ -> throwUnexpectedItem e
-
 
 let execute (ast : Sexpression) =
     ast |> printfn "Got AST: %A"
@@ -108,14 +75,11 @@ let execute (ast : Sexpression) =
                 | S e -> e
                 | Atom (Number n) -> Atom (Number n)::[]
                 | _ -> []
-            let rr = Atom (Number n)::newR
-            printfn "Appending %A" rr
-            eval rem (S rr)
+            Atom (Number n)::newR |> S |> eval rem
         | Atom (Symbol sy)::rem -> 
-            let eval2 = eval rem r
-            printfn "Here be: %A" eval2
             match sy with
-            | "+" -> functionCall eval2 Add
+            | "+" -> functionCall (eval rem r) Add
+            | "-" -> functionCall (eval rem r) Sub
             | _ -> throwUnexpectedSymbol sy
         | c ->
             printfn "Got %A" c
