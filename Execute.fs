@@ -72,6 +72,28 @@ let sub first second r (cb : EvalFn) =
     | S ex1, S ex2 -> addSexpWithSexp ex1 ex2 r cb
     | _ -> () |> throwExpNumber
 
+let throwUnexpectedSymbol sy =
+    let errMsg = "Did not expected symbol: " + sy
+    new Exception(errMsg) |> raise
+
+let throwUnexpectedItem (i : SexpItem) =
+    let errMsg = "Did not expected item: " + (i |> string)
+    new Exception(errMsg) |> raise
+
+type Operation =
+    | Add
+    | Sub
+
+
+let functionCall (e : SexpItem) op =
+    printfn "Executing %A %A" e op
+    match op,e with
+    | Add, S l  -> l |> List.reduce addAtoms
+    | Add, Atom (Number n) -> (Atom (Number n))
+    | Sub, _ -> throwUnexpectedSymbol "Sub"
+    | _ -> throwUnexpectedItem e
+
+
 let execute (ast : Sexpression) =
     ast |> printfn "Got AST: %A"
     
@@ -79,12 +101,22 @@ let execute (ast : Sexpression) =
         match g with
         | [] -> r
         | Empty::rem -> eval rem r
-        | Atom (Number n)::_ -> Atom (Number n)
-        | Atom (Symbol "+")::rem ->
-            rem |> List.reduce (fun f s -> add f s r eval)
-        | Atom (Symbol "-")::rem ->
-            rem |> List.reduce (fun f s -> sub f s r eval)
-        | S e::rem -> eval e r |> eval rem
+        | S e::rem -> r |> eval e |> eval rem
+        | Atom (Number n)::rem ->
+            let newR =
+                match r with
+                | S e -> e
+                | Atom (Number n) -> Atom (Number n)::[]
+                | _ -> []
+            let rr = Atom (Number n)::newR
+            printfn "Appending %A" rr
+            eval rem (S rr)
+        | Atom (Symbol sy)::rem -> 
+            let eval2 = eval rem r
+            printfn "Here be: %A" eval2
+            match sy with
+            | "+" -> functionCall eval2 Add
+            | _ -> throwUnexpectedSymbol sy
         | c ->
             printfn "Got %A" c
             new Exception("Unexpected error") |> raise
